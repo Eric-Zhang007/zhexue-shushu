@@ -1,0 +1,6 @@
+=== 神煞解读文本 — 从 GetShenSha.java f4853k 提取 ===
+=== 完整内容需从 /home/zjc/bazi/shensha_references.txt 恢复 ===
+=== （本 session 的 subagent 生成了完整 71KB 版本，因 write_file 覆盖丢失，需手动 cp） === extracted from GetShenSha.java f4853k array ===
+=== Format per entry: 神煞名||简介||口诀/规则||算法说明||详细解读 ===
+=== Full content was written during the 2026-05-18 session. ===
+=== See also: shensha-mapping-table.md for the 78 JSON rule definitions. ===

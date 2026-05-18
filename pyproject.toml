@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "zhexue-shushu"
+version = "1.0.0"
+description = "玄学数术工具集  — 八字(59神煞·节气·大运·流年·流月·流日·流时·用神·称骨)+梅花+奇门+六壬+紫微"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+keywords = ["bazi", "zisha", "qimen", "liuren", "meihua", "chinese-metaphysics"]
+
+[project.scripts]
+bazi = "zhexue.bazi:main"
+chenggu = "zhexue.chenggu:main"
+yongshen = "zhexue.yongshen:main"
+
+[tool.setuptools]
+packages = ["zhexue"]
+package-dir = {"zhexue" = "zhexue"}
+
+[tool.setuptools.package-data]
+zhexue = ["**/*"]
