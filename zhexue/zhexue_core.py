@@ -25,6 +25,416 @@ ZHI_YINYANG = {'子':1,'丑':0,'寅':1,'卯':0,'辰':1,'巳':0,'午':1,'未':0,'
 
 SHENG_XIAO = ['鼠','牛','虎','兔','龙','蛇','马','羊','猴','鸡','狗','猪']
 
+# ===== 紫微斗数扩展数据 =====
+
+# 命主表 [地支索引]
+MING_ZHU_TABLE = {
+    0: '贪狼', 6: '武曲',
+    1: '天相', 7: '天同',
+    2: '七杀', 8: '廉贞',
+    3: '太阳', 9: '文曲',
+    4: '天机', 10: '文昌',
+    5: '紫微', 11: '巨门',
+}
+
+# 身主表 [地支索引]
+SHEN_ZHU_TABLE = {
+    0: '火星',   6: '火星',
+    1: '天相',   7: '天相',
+    2: '天梁',   8: '天梁',
+    3: '天同',   9: '天同',
+    4: '文昌',   10: '文昌',
+    5: '天机',   11: '天机',
+}
+
+# 五行局数字→文字
+JU_NAMES = {2: '水二局', 3: '木三局', 4: '金四局', 5: '土五局', 6: '火六局'}
+
+# 子年斗君表 [年干索引→地支索引]
+DOU_JUN_TABLE = {
+    (0, 6): 3,   # 甲庚→卯(3)
+    (1, 7): 9,   # 乙辛→酉(9)
+    (2, 8): 7,   # 丙壬→未(7)
+    (3, 9): 1,   # 丁癸→丑(1)
+    (4,): 10,    # 戊→戌(10)
+    (5,): 5,     # 己→巳(5)
+}
+
+def calc_ming_zhu(year_zhi_idx):
+    return MING_ZHU_TABLE.get(year_zhi_idx, '巨门')
+
+def calc_shen_zhu(year_zhi_idx):
+    return SHEN_ZHU_TABLE.get(year_zhi_idx, '天相')
+
+def calc_dou_jun(year_gan_idx):
+    for keys, val in DOU_JUN_TABLE.items():
+        if year_gan_idx in keys:
+            return val
+    return 3
+
+# ===== 庙旺利陷表 (MIAO_WANG_LI_XIAN) =====
+# 数值含义: 庙(5) > 旺(4) > 得(3) > 利(2) > 平(1) > 不(0) > 陷(-1)
+# 12 地支顺序: 子丑寅卯辰巳午未申酉戌亥
+MIAO_WANG_LI_XIAN = {
+    # ===== 14 主星 =====
+    '紫微': ['庙','旺','得','旺','得','平','庙','旺','得','旺','得','平'],
+    '天机': ['庙','陷','得','旺','利','庙','陷','得','旺','利','庙','陷'],
+    '太阳': ['陷','陷','旺','旺','旺','旺','庙','得','利','平','陷','陷'],
+    '武曲': ['旺','庙','利','庙','旺','平','旺','庙','利','庙','旺','平'],
+    '天同': ['旺','庙','利','平','平','旺','庙','陷','旺','平','平','旺'],
+    '廉贞': ['平','庙','旺','利','平','旺','庙','旺','利','平','旺','平'],
+    '天府': ['庙','旺','得','旺','得','平','庙','旺','得','旺','得','平'],
+    '太阴': ['旺','旺','平','平','平','陷','陷','平','旺','庙','旺','庙'],
+    '贪狼': ['庙','旺','平','利','平','旺','庙','旺','平','庙','旺','利'],
+    '巨门': ['旺','庙','利','平','陷','旺','庙','旺','平','平','旺','陷'],
+    '天相': ['庙','陷','得','旺','利','平','庙','陷','得','旺','得','平'],
+    '天梁': ['旺','庙','得','平','利','旺','庙','旺','利','平','旺','平'],
+    '七杀': ['旺','庙','旺','利','平','旺','旺','庙','旺','利','平','旺'],
+    '破军': ['庙','旺','平','利','平','旺','庙','旺','平','利','旺','平'],
+    # ===== 辅助星（乙级星） =====
+    '左辅': ['平','旺','旺','平','陷','旺','不','庙','平','陷','庙','陷'],
+    '右弼': ['旺','平','庙','平','平','平','不','庙','庙','平','平','平'],
+    '文昌': ['旺','庙','平','平','平','平','旺','旺','庙','旺','平','平'],
+    '文曲': ['平','平','平','平','旺','庙','平','平','旺','庙','平','平'],
+    '天魁': ['得','庙','得','庙','旺','庙','庙','庙','旺','得','得','得'],
+    '天钺': ['庙','得','庙','旺','庙','得','庙','得','庙','旺','庙','得'],
+    '禄存': ['庙','旺','庙','利','旺','庙','旺','庙','利','庙','旺','旺'],
+    '擎羊': ['庙','陷','陷','庙','陷','陷','庙','陷','陷','庙','陷','陷'],
+    '陀罗': ['平','庙','平','平','庙','平','平','庙','平','平','庙','平'],
+    '火星': ['平','陷','平','平','旺','旺','平','平','平','平','平','陷'],
+    '铃星': ['平','平','平','平','旺','旺','平','平','平','平','平','平'],
+    '天马': ['庙','平','旺','平','平','庙','庙','平','旺','平','平','庙'],
+}
+# ===== 小星系统 (40 minor star placement functions) =====
+
+# ── Group A: 年支定 ──
+
+def star_hongluan(year_zhi_idx):
+    """红鸾: 卯上起子年,逆数至生年支"""
+    return (3 - year_zhi_idx + 12) % 12
+
+def star_tianxi(year_zhi_idx):
+    """天喜: 红鸾对宫"""
+    return (star_hongluan(year_zhi_idx) + 6) % 12
+
+def star_tianyao(year_zhi_idx):
+    """天姚: 亥上起子年,顺数至生年支"""
+    return (11 + year_zhi_idx) % 12
+
+def star_tianxing(year_zhi_idx):
+    """天刑: 酉上起子年,顺数至生年支"""
+    return (9 + year_zhi_idx) % 12
+
+def star_yinsha(year_zhi_idx):
+    """阴煞: 寅上起子年,顺数至生年支"""
+    return (2 + year_zhi_idx) % 12
+
+def star_tianshang(ming_gong):
+    """天伤: 命宫对宫顺行一位 (夫妻宫+1)"""
+    return (ming_gong + 7) % 12
+
+def star_tianshi(ming_gong):
+    """天使: 命宫对宫逆行一位 (夫妻宫-1)"""
+    return (ming_gong + 5) % 12
+
+def star_longde(year_zhi_idx):
+    """龙德: 丑上起午年,顺数至生年支"""
+    return (year_zhi_idx - 5 + 12) % 12
+
+def star_tiande(year_zhi_idx):
+    """天德: 酉上起子年,顺数至生年支"""
+    return (9 + year_zhi_idx) % 12
+
+_SANHE_JU = {
+    0: 0, 4: 0, 8: 0,    # 申子辰
+    2: 1, 6: 1, 10: 1,   # 寅午戌
+    1: 2, 5: 2, 9: 2,   # 巳酉丑
+    3: 3, 7: 3, 11: 3,    # 亥卯未
+}
+
+def star_jiesha(year_zhi_idx):
+    """劫煞: 申子辰→巳(4),亥卯未→申(9),寅午戌→亥(11),巳酉丑→寅(2)"""
+    table = {0: 4, 1: 11, 2: 2, 3: 9}
+    ju = _SANHE_JU.get(year_zhi_idx)
+    return table.get(ju, 4)
+
+def star_zhaisha(year_zhi_idx):
+    """灾煞(白虎): 申子辰→午(6),寅午戌→子(0),巳酉丑→卯(3),亥卯未→酉(9)"""
+    table = {0: 6, 1: 0, 2: 3, 3: 9}
+    ju = _SANHE_JU.get(year_zhi_idx)
+    return table.get(ju, 6)
+
+def star_tianma(year_zhi_idx):
+    """天马: 申子辰→寅(2),寅午戌→申(8),巳酉丑→亥(11),亥卯未→巳(5)"""
+    table = {0: 2, 1: 8, 2: 11, 3: 5}
+    ju = _SANHE_JU.get(year_zhi_idx)
+    return table.get(ju, 2)
+
+# ── Group B: 月支定 ──
+
+def star_santai(month_zhi_idx):
+    """三台: 辰上起正月,顺数至生月 (月支索引)"""
+    return (month_zhi_idx + 2) % 12
+
+def star_bazuo(month_zhi_idx):
+    """八座: 戌上起正月,逆数至生月 (月支索引)"""
+    return (10 - (month_zhi_idx - 2) + 12) % 12
+
+def star_tianguan(month_zhi_idx):
+    """天官: 寅上起正月,顺数至生月 (月支索引)"""
+    return month_zhi_idx % 12
+
+def star_tianfu(month_zhi_idx):
+    """天福: 卯上起正月,顺数至生月 (月支索引)"""
+    return (month_zhi_idx + 1) % 12
+
+def star_tiancai(ming_gong, year_zhi_idx):
+    """天才: 命宫起子年,顺数至生年支"""
+    return (ming_gong + year_zhi_idx) % 12
+
+def star_tianshou(shen_gong, year_zhi_idx):
+    """天寿: 身宫起子年,顺数至生年支"""
+    return (shen_gong + year_zhi_idx) % 12
+
+def star_tianku(month_zhi_idx):
+    """天哭: 午上起正月,顺数至生月 (月支索引)"""
+    return (month_zhi_idx + 4) % 12
+
+def star_tianxu(month_zhi_idx):
+    """天虚: 午上起正月,逆数至生月 (月支索引)"""
+    return (6 - (month_zhi_idx - 2) + 12) % 12
+
+# ── Group C: 时支定 ──
+
+def star_tianchu(hour_zhi_idx):
+    """天厨: 巳上起子时,顺数至生时"""
+    return (5 + hour_zhi_idx) % 12
+
+# ── Group D: 年干定 + 月支定 ──
+
+def star_tianwu(month_zhi_idx):
+    """天巫: 辰上起正月,顺数至生月 (月支索引)"""
+    return (month_zhi_idx + 2) % 12
+
+def star_tianyue(month_zhi_idx):
+    """天月: 戌上起正月,顺数至生月 (月支索引)"""
+    return (month_zhi_idx + 8) % 12
+
+def star_jieshen(month_zhi_idx):
+    """解神: 亥上起正月,顺数至生月 (月支索引)"""
+    return (month_zhi_idx + 9) % 12
+
+# ── 旬空 / 截空 (年干定) ──
+
+def star_xunkong(year_gan_idx):
+    """旬空: 返回 (空1, 空2) 地支索引元组, 年干定旬空"""
+    start = (10 - (year_gan_idx // 2) * 2) % 12
+    return (start, (start + 1) % 12)
+
+def star_jiekong(year_gan_idx):
+    """截空: 返回 (正空, 副空) 地支索引元组, 年干定"""
+    start = (10 - (year_gan_idx // 2) * 2) % 12
+    return (start, (start + 1) % 12)
+
+# ── 三合局年支定星 ──
+
+_SANHE_ZHI = {
+    0: 0, 4: 0, 8: 0,     # 申子辰→局0
+    2: 1, 6: 1, 10: 1,    # 寅午戌→局1
+    1: 2, 5: 2, 9: 2,    # 巳酉丑→局2
+    3: 3, 7: 3, 11: 3,     # 亥卯未→局3
+}
+
+def star_posui(year_zhi_idx):
+    """破碎: 巳子酉卯→丑(1), 寅亥午未→辰(4), 申戌→戌(10), 余→None"""
+    table = {
+        0: 1, 3: 1, 5: 1, 9: 1,    # 子卯巳酉 → 丑
+        2: 4, 6: 4, 7: 4, 11: 4,   # 寅午未亥 → 辰
+        8: 10, 10: 10,              # 申戌 → 戌
+    }
+    return table.get(year_zhi_idx)
+
+def star_huagai(year_zhi_idx):
+    """华盖: 申子辰→辰(4),寅午戌→戌(10),巳酉丑→丑(1),亥卯未→未(7)"""
+    table = {0: 4, 1: 10, 2: 1, 3: 7}
+    return table.get(_SANHE_ZHI.get(year_zhi_idx), 4)
+
+def star_xianchi(year_zhi_idx):
+    """咸池(桃花): 申子辰→酉(9),寅午戌→卯(3),巳酉丑→午(6),亥卯未→子(0)"""
+    table = {0: 9, 1: 3, 2: 6, 3: 0}
+    return table.get(_SANHE_ZHI.get(year_zhi_idx), 9)
+
+def star_guchen(year_zhi_idx):
+    """孤辰: 申子辰→寅(2),寅午戌→戌(10),巳酉丑→午(6),亥卯未→申(8)"""
+    table = {0: 2, 1: 10, 2: 6, 3: 8}
+    return table.get(_SANHE_ZHI.get(year_zhi_idx), 2)
+
+def star_guanxiu(year_zhi_idx):
+    """寡宿: 申子辰→戌(10),寅午戌→辰(4),巳酉丑→卯(3),亥卯未→子(0)"""
+    table = {0: 10, 1: 4, 2: 3, 3: 0}
+    return table.get(_SANHE_ZHI.get(year_zhi_idx), 10)
+
+# ── 年支逐一定星 ──
+
+_FEILIAN_TABLE = {
+    0: 5,   # 子→巳
+    1: 6,   # 丑→午
+    2: 8,   # 寅→申
+    3: 9,   # 卯→酉
+    4: 1,   # 辰→丑
+    5: 2,   # 巳→寅
+    6: 10,  # 午→戌
+    7: 11,  # 未→亥
+    8: 4,   # 申→辰
+    9: 5,   # 酉→巳
+    10: 2,  # 戌→寅
+    11: 3,  # 亥→卯
+}
+
+def star_feilian(year_zhi_idx):
+    """蜚廉: 子→巳,丑→午,寅→申,卯→酉,辰→丑,巳→寅,午→戌,未→亥,申→辰,酉→巳,戌→寅,亥→卯"""
+    return _FEILIAN_TABLE.get(year_zhi_idx, 5)
+
+# ── 时支定星 ──
+
+def star_taifu(hour_zhi_idx):
+    """台辅: 午上起子时,顺数至生时"""
+    return (6 + hour_zhi_idx) % 12
+
+def star_longchi(hour_zhi_idx):
+    """龙池: 辰上起子时,顺数至生时"""
+    return (4 + hour_zhi_idx) % 12
+
+def star_fengge(hour_zhi_idx):
+    """凤阁: 戌上起子时,顺数至生时"""
+    return (10 + hour_zhi_idx) % 12
+
+def star_dijie(hour_zhi_idx):
+    """地劫: 亥上起子时,逆数至生时"""
+    return (11 - hour_zhi_idx + 12) % 12
+
+def star_dikong(hour_zhi_idx):
+    """地空: 亥上起子时,顺数至生时"""
+    return (11 + hour_zhi_idx) % 12
+
+# ── 月支定星 (additional) ──
+
+def star_fenggao(month_zhi_idx):
+    """封诰: 寅上起正月,顺数至生月 (月支索引)"""
+    return month_zhi_idx % 12
+
+# ── 年支定星 (additional) ──
+
+def star_enguang(year_zhi_idx):
+    """恩光: 子年起戌(10),顺数至生年"""
+    return (10 + year_zhi_idx) % 12
+
+# ── 岁前星 (13颗, 按年支循环) ──
+# 岁前星从岁建起, 年支寅→岁建在寅, 年支卯→岁建在卯, ...
+# 岁建→晦气→丧门→贯索→官符→小耗→大耗→龙德→白虎→天德→吊客→病符
+SUI_QIAN_XING = ['岁建','晦气','丧门','贯索','官符','小耗','大耗','龙德','白虎','天德','吊客','病符']
+
+def calc_suiqian(year_zhi_idx):
+    """岁前星: 以年支定岁建位置,返回[地支索引→星名]的字典
+    岁建在年支位, 其余星顺次排列。
+    """
+    result = {}
+    for p in range(12):
+        offset = (p - year_zhi_idx) % 12
+        result[p] = SUI_QIAN_XING[offset]
+    return result
+
+def get_suiqian(year_zhi_idx, palace_zhi_idx):
+    """获取某宫的岁前星"""
+    offset = (palace_zhi_idx - year_zhi_idx) % 12
+    return SUI_QIAN_XING[offset]
+
+# ── 将前星 (12颗, 按年支三合局定起始) ──
+# 将星→攀鞍→岁驿→息神→华盖→劫煞→灾煞→天煞→指背→咸池→月煞→亡神
+# 起始规则: 寅午戌年将星在午(6), 申子辰年在申(8), 巳酉丑年在卯(3), 亥卯未年在子(0)
+JIANG_QIAN_XING = ['将星','攀鞍','岁驿','息神','华盖','劫煞','灾煞','天煞','指背','咸池','月煞','亡神']
+
+# 三合局 → 将星起始地支持图
+# 寅午戌(2,6,10) → 午(6)
+# 申子辰(8,0,4)  → 申(8)
+# 巳酉丑(5,9,1)  → 卯(3)
+# 亥卯未(11,3,7) → 子(0)
+_JIANG_QIAN_START = {
+    (2, 6, 10): 6,   # 寅午戌 → 午
+    (8, 0, 4):  8,   # 申子辰 → 申
+    (5, 9, 1):  3,   # 巳酉丑 → 卯
+    (11, 3, 7): 0,   # 亥卯未 → 子
+}
+
+def _jiangqian_start(year_zhi_idx):
+    for triple, start in _JIANG_QIAN_START.items():
+        if year_zhi_idx in triple:
+            return start
+    return 6  # fallback
+
+def get_jiangqian(year_zhi_idx, palace_zhi_idx):
+    """获取某宫的将前星"""
+    start = _jiangqian_start(year_zhi_idx)
+    offset = (palace_zhi_idx - start) % 12
+    return JIANG_QIAN_XING[offset]
+
+# ── 紫微斗数十二长生 ──
+# 在紫微斗数中, 十二长生命宫固定为'病', 然后按地支顺序顺时针递增。
+# 顺序: 长生→沐浴→冠带→临官→帝旺→衰→病→死→墓→绝→胎→养
+ZIWEI_CHANG_SHENG = ['长生','沐浴','冠带','临官','帝旺','衰','病','死','墓','绝','胎','养']
+
+def ziwei_shier_changsheng(ming_palace_zhi, palace_zhi):
+    """紫微斗数十二长生: 命宫固定为'病'(index 6), 逆时针循环
+    
+    文墨天机排法: 命宫起'病', 然后按地支顺序逆时针(递减索引)依次排列。
+    验证案例: 命宫[亥]=病, 父母[子]=衰, 福德[丑]=帝旺, ...
+    
+    参数:
+        ming_palace_zhi: 命宫地支索引 (0-11)
+        palace_zhi: 目标宫地支索引 (0-11)
+    返回:
+        十二长生状态名
+    """
+    offset = (palace_zhi - ming_palace_zhi) % 12
+    idx = (6 - offset) % 12
+    return ZIWEI_CHANG_SHENG[idx]
+
+# ── 太岁煞禄 (博士十二神) ──
+# 顺序: 博士→力士→青龙→小耗→将军→奏书→飞廉→喜神→病符→大耗→伏兵→官符
+# 排法: 以生年天干的禄存位起博士,
+#       阳男阴女顺时针(地支索引递增), 阴男阳女逆时针(地支索引递减)
+TAI_SUI_SHA_LU = ['博士','力士','青龙','小耗','将军','奏书','飞廉','喜神','病符','大耗','伏兵','官符']
+
+# 天干禄存位 (十二长生临官位)
+# 甲禄到寅(2),乙禄到卯(3),丙戊禄到巳(5),丁己禄到午(6),
+# 庚禄到申(8),辛禄到酉(9),壬禄到亥(11),癸禄到子(0)
+GAN_LU_CUN = {0: 2, 1: 3, 2: 5, 3: 6, 4: 5, 5: 6, 6: 8, 7: 9, 8: 11, 9: 0}
+# GAN_LU_CUN[年干索引] = 禄存地支索引
+
+def get_taisui_shalu(year_gan_idx, palace_zhi_idx, is_male, gan_yang=1):
+    """太岁煞禄 (博士十二神)
+    
+    以年干禄存位起博士, 阳男阴女顺行, 阴男阳女逆行。
+    
+    参数:
+        year_gan_idx: 年干索引 (0-9)
+        palace_zhi_idx: 目标宫地支索引 (0-11)
+        is_male: True=男, False=女
+        gan_yang: 年干阴阳 (1=阳, 0=阴) — 可传参覆盖
+    返回:
+        博士十二神星名
+    """
+    start_palace = GAN_LU_CUN[year_gan_idx]
+    if (gan_yang == 1 and is_male) or (gan_yang == 0 and not is_male):
+        # 阳男 / 阴女 → 顺行 (地支索引递增)
+        offset = (palace_zhi_idx - start_palace) % 12
+    else:
+        # 阴男 / 阳女 → 逆行 (地支索引递减)
+        offset = (start_palace - palace_zhi_idx) % 12
+    return TAI_SUI_SHA_LU[offset]
+
+# ===== 紫微斗数扩展数据结束 =====
+
 # ========== 五行体系 ==========
 WUXING_SHENG = {'木':'火','火':'土','土':'金','金':'水','水':'木'}
 WUXING_KE   = {'木':'土','土':'水','水':'火','火':'金','金':'木'}
@@ -50,6 +460,49 @@ def day_ganzhi_from_date(year, month, day):
     gan = (RI_GAN_REF + delta) % 10
     zhi = (RI_ZHI_REF + delta) % 12
     return gan, zhi
+
+
+# ========================================================================
+# 真太阳时修正
+# ========================================================================
+
+def solar_time_correction(longitude, year, month, day, hour, minute):
+    """真太阳时修正
+
+    北京时间(东八区120°E) → 真太阳时
+    修正 = 经度修正(4分/度) + 真太阳时差(EoT)
+
+    Args:
+        longitude: 地理经度(东经正数)
+        year, month, day, hour, minute: 北京时间
+
+    Returns:
+        (corrected_hour, corrected_minute) 浮点数，可直接用于时辰判定
+    """
+    local_minutes = hour * 60 + minute + (longitude - 120) * 4
+
+    days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    is_leap = (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+    if is_leap:
+        days_in_month[1] = 29
+
+    n = sum(days_in_month[:month - 1]) + day
+    B = 2 * math.pi * (n - 1) / (366 if is_leap else 365)
+    eot = 229.2 * (0.000075 + 0.001868 * math.cos(B) - 0.032077 * math.sin(B)
+                   - 0.014615 * math.cos(2 * B) - 0.04089 * math.sin(2 * B))
+
+    solar_minutes = local_minutes + eot
+
+    if solar_minutes < 0:
+        solar_minutes += 1440
+    elif solar_minutes >= 1440:
+        solar_minutes -= 1440
+
+    result_hour = solar_minutes / 60.0
+    result_minute = solar_minutes % 60
+
+    return result_hour, result_minute
+
 
 def hour_zhi_index(hour, minute=0):
     h = hour + minute / 60.0
@@ -2216,6 +2669,49 @@ def day_ganzhi_from_date(year, month, day):
     gan = (RI_GAN_REF + delta) % 10
     zhi = (RI_ZHI_REF + delta) % 12
     return gan, zhi
+
+
+# ========================================================================
+# 真太阳时修正
+# ========================================================================
+
+def solar_time_correction(longitude, year, month, day, hour, minute):
+    """真太阳时修正
+
+    北京时间(东八区120°E) → 真太阳时
+    修正 = 经度修正(4分/度) + 真太阳时差(EoT)
+
+    Args:
+        longitude: 地理经度(东经正数)
+        year, month, day, hour, minute: 北京时间
+
+    Returns:
+        (corrected_hour, corrected_minute) 浮点数，可直接用于时辰判定
+    """
+    local_minutes = hour * 60 + minute + (longitude - 120) * 4
+
+    days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    is_leap = (year % 4 == 0 and year % 100 != 0) or (year % 400 == 0)
+    if is_leap:
+        days_in_month[1] = 29
+
+    n = sum(days_in_month[:month - 1]) + day
+    B = 2 * math.pi * (n - 1) / (366 if is_leap else 365)
+    eot = 229.2 * (0.000075 + 0.001868 * math.cos(B) - 0.032077 * math.sin(B)
+                   - 0.014615 * math.cos(2 * B) - 0.04089 * math.sin(2 * B))
+
+    solar_minutes = local_minutes + eot
+
+    if solar_minutes < 0:
+        solar_minutes += 1440
+    elif solar_minutes >= 1440:
+        solar_minutes -= 1440
+
+    result_hour = solar_minutes / 60.0
+    result_minute = solar_minutes % 60
+
+    return result_hour, result_minute
+
 
 def hour_zhi_index(hour, minute=0):
     h = hour + minute / 60.0

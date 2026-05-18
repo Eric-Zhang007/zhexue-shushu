@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""紫微斗数 — 完整安星诀实现
+"""紫微斗数 — 文墨天机格式命盘输出
 
 CLI: python3 ziwei.py <year> <month> <day> <hour> <minute> <gender>
-输出: JSON + 星盘文本
+输出: 文墨天机风格命盘文本
 
 依赖: zhexue_core.py (同目录), lunarcalendar, ephem
 """
@@ -18,6 +18,23 @@ from zhexue_core import (
     month_gan, WU_HU_DUN, get_ju, get_nayin,
     NAYIN_TO_JU, NAYIN_WUXING,
     SHENG_XIAO, get_shi_shen,
+    MIAO_WANG_LI_XIAN, JU_NAMES,
+    calc_ming_zhu, calc_shen_zhu, calc_dou_jun,
+    star_hongluan, star_tianxi, star_tianyao, star_tianxing, star_yinsha,
+    star_tianshang, star_tianshi, star_longde, star_tiande,
+    star_jiesha, star_zhaisha,
+    star_santai, star_bazuo, star_tianguan, star_tianfu,
+    star_tiancai, star_tianshou, star_tianku, star_tianxu,
+    star_tianchu, star_taifu, star_longchi, star_fengge,
+    star_dijie, star_dikong,
+    star_tianwu, star_tianyue, star_jieshen,
+    star_xunkong, star_jiekong,
+    star_posui, star_huagai, star_xianchi, star_guchen, star_guanxiu,
+    star_feilian, star_enguang,
+    star_fenggao,
+    get_suiqian, get_jiangqian,
+    ziwei_shier_changsheng,
+    get_taisui_shalu,
 )
 
 # ========================================================================
@@ -171,6 +188,12 @@ SIHUA_TABLE = {
 PALACE_NAMES = ['命宫','兄弟宫','夫妻宫','子女宫','财帛宫','疾厄宫',
                 '迁移宫','交友宫','官禄宫','田宅宫','福德宫','父母宫']
 
+# 星分类
+MAIN_STARS = {'紫微','天机','太阳','武曲','天同','廉贞',
+              '天府','太阴','贪狼','巨门','天相','天梁','七杀','破军'}
+AUX_STARS = {'左辅','右弼','文昌','文曲','天魁','天钺',
+             '禄存','擎羊','陀罗','火星','铃星','天马'}
+
 
 def ziwei_star_position(lunar_day, ju):
     """紫微星定位. 返回地支索引(0=子...11=亥).
@@ -185,12 +208,25 @@ def ziwei_star_position(lunar_day, ju):
         return (base + 1) % 12 if r % 2 == 1 else (base - 1) % 12
 
 
+def _get_star_brightness(star_name, zhi_idx):
+    """获取星曜庙旺利陷等级, 返回中文名"""
+    if star_name not in MIAO_WANG_LI_XIAN:
+        return '-'
+    pos_data = MIAO_WANG_LI_XIAN[star_name]
+    if zhi_idx >= len(pos_data):
+        return '-'
+    val = pos_data[zhi_idx]
+    if val == '-' or val is None:
+        return '-'
+    return val
+
+
 # ========================================================================
 # 命盘
 # ========================================================================
 
 class ZiweiChart:
-    """紫微斗数命盘"""
+    """紫微斗数命盘 — 文墨天机格式"""
 
     def __init__(self, year, month, day, hour, minute, gender):
         self.solar_year = year
@@ -228,16 +264,24 @@ class ZiweiChart:
         self.ming_ganzhi = (ming_gan, self.ming_palace_zhi)
         self.ju = get_ju(ming_gan, self.ming_palace_zhi)
 
-        # 7. 布星
+        # 7. 布星 (主星 + 辅星 + 小星)
         self.stars = self._place_all_stars()
 
-        # 8. 十二宫
-        self.palaces = self._build_palaces()
+        # 8. 命主/身主/斗君
+        self.ming_zhu = calc_ming_zhu(self.year_zhi)
+        self.shen_zhu = calc_shen_zhu(self.year_zhi)
+        self.dou_jun = calc_dou_jun(self.year_gan)
 
         # 9. 四化
         self.sihua = self._calc_sihua()
 
-        # 10. 大限
+        # 10. 自化
+        self.zihua = self._calc_zihua()
+
+        # 11. 十二宫
+        self.palaces = self._build_palaces()
+
+        # 12. 大限
         self.grand_limits = self._calc_grand_limits()
 
     def _calc_ming_palace(self):
@@ -257,7 +301,7 @@ class ZiweiChart:
         return gans
 
     def _place_all_stars(self):
-        """安放全部星曜"""
+        """安放全部星曜 — 主星 + 辅星 + 小星"""
         stars = {}
 
         ziwei_pos = ziwei_star_position(self.lunar_day, self.ju)
@@ -290,17 +334,108 @@ class ZiweiChart:
         lx_pos = lingxing_position(self.year_zhi, self.hour_zhi)
         stars.setdefault(lx_pos, []).append('铃星')
 
-        # 排序: 主星在前, 辅星在后
+        # ---- 小星 ----
+        minor_stars = self._calc_all_minor_stars()
+        for zhi, names in minor_stars.items():
+            stars.setdefault(zhi, []).extend(names)
+
+        # 排序: 主星在前, 辅星在中, 小星在后
         for zhi in stars:
-            stars[zhi].sort(key=lambda n: 0 if n in ZIWEI_OFFSETS or n in TIANFU_OFFSETS else 1)
+            stars[zhi].sort(key=_star_sort_key)
 
         return stars
+
+    def _calc_all_minor_stars(self):
+        """计算所有小星, 返回 {zhi: [star_names]}"""
+        minor = {}
+        
+        # 月支索引 (正月=寅=2)
+        month_zhi = (self.lunar_month + 1) % 12
+        
+        checks = [
+            ('红鸾', star_hongluan(self.year_zhi)),
+            ('天喜', star_tianxi(self.year_zhi)),
+            ('天姚', star_tianyao(self.year_zhi)),
+            ('天刑', star_tianxing(self.year_zhi)),
+            ('阴煞', star_yinsha(self.year_zhi)),
+            ('天伤', star_tianshang(self.ming_palace_zhi)),
+            ('天使', star_tianshi(self.ming_palace_zhi)),
+            ('龙德', star_longde(self.year_zhi)),
+            ('天德', star_tiande(self.year_zhi)),
+            ('劫煞', star_jiesha(self.year_zhi)),
+            ('灾煞', star_zhaisha(self.year_zhi)),
+            ('三台', star_santai(month_zhi)),
+            ('八座', star_bazuo(month_zhi)),
+            ('天官', star_tianguan(month_zhi)),
+            ('天福', star_tianfu(month_zhi)),
+            ('天巫', star_tianwu(month_zhi)),
+            ('天月', star_tianyue(month_zhi)),
+            ('解神', star_jieshen(month_zhi)),
+            ('天厨', star_tianchu(self.hour_zhi)),
+            ('台辅', star_taifu(self.hour_zhi)),
+            ('龙池', star_longchi(self.hour_zhi)),
+            ('凤阁', star_fengge(self.hour_zhi)),
+            ('地劫', star_dijie(self.hour_zhi)),
+            ('地空', star_dikong(self.hour_zhi)),
+            ('封诰', star_fenggao(month_zhi)),
+            ('天哭', star_tianku(month_zhi)),
+            ('天虚', star_tianxu(month_zhi)),
+            ('破碎', star_posui(self.year_zhi)),
+            ('蜚廉', star_feilian(self.year_zhi)),
+            ('天才', star_tiancai(self.ming_palace_zhi, self.year_zhi)),
+            ('天寿', star_tianshou(self.shen_palace_zhi, self.year_zhi)),
+            ('恩光', star_enguang(self.year_zhi)),
+            ('华盖', star_huagai(self.year_zhi)),
+            ('咸池', star_xianchi(self.year_zhi)),
+            ('孤辰', star_guchen(self.year_zhi)),
+            ('寡宿', star_guanxiu(self.year_zhi)),
+        ]
+        
+        # 旬空/截空 返回 tuple
+        xunk = star_xunkong(self.year_gan)
+        if isinstance(xunk, tuple):
+            for p in xunk:
+                if p is not None:
+                    minor.setdefault(p, []).append('旬空')
+        jiek = star_jiekong(self.year_gan)
+        if isinstance(jiek, tuple):
+            for p in jiek:
+                if p is not None:
+                    minor.setdefault(p, []).append('截空')
+        
+        for name, pos in checks:
+            if pos is None:
+                continue
+            if isinstance(pos, tuple):
+                for p in pos:
+                    if p is not None:
+                        minor.setdefault(p, []).append(name)
+            elif pos == pos:  # always True, but catches the case
+                minor.setdefault(pos, []).append(name)
+        
+        return minor
 
     def _build_palaces(self):
         """构建十二宫(逆时针: 命→兄弟→夫妻→...)"""
         palaces = {}
         zhi = self.ming_palace_zhi
         for pi in range(12):
+            # 神煞
+            sui_qian = get_suiqian(self.year_zhi, zhi)
+            jiang_qian = get_jiangqian(self.year_zhi, zhi)
+            chang_sheng = ziwei_shier_changsheng(self.ming_palace_zhi, zhi)
+            is_male = (self.gender == '男')
+            gan_yang = GAN_YINYANG.get(TIAN_GAN[self.year_gan], 1)
+            tai_sui = get_taisui_shalu(self.year_gan, zhi, is_male, gan_yang)
+
+            # 小限
+            xiao_xian_base = 1 + ((self.ming_palace_zhi - zhi) % 12)
+            xiao_xian = [xiao_xian_base + 12 * n for n in range(6)]
+
+            # 流年
+            liu_nian_base = 1 + ((zhi - self.ming_palace_zhi) % 12)
+            liu_nian = [liu_nian_base + 12 * n for n in range(6)]
+
             palaces[zhi] = {
                 '宫名': PALACE_NAMES[pi],
                 '地支': DI_ZHI[zhi],
@@ -308,6 +443,14 @@ class ZiweiChart:
                 '干支': TIAN_GAN[self.palace_gans[zhi]] + DI_ZHI[zhi],
                 '星曜': self.stars.get(zhi, []),
                 '序号': pi,
+                '神煞': {
+                    '岁前星': sui_qian,
+                    '将前星': jiang_qian,
+                    '十二长生': chang_sheng,
+                    '太岁煞禄': tai_sui,
+                },
+                '小限': xiao_xian,
+                '流年': liu_nian,
             }
             zhi = (zhi - 1) % 12
         return palaces
@@ -316,15 +459,62 @@ class ZiweiChart:
         s = SIHUA_TABLE[self.year_gan]
         return {'化禄': s[0], '化权': s[1], '化科': s[2], '化忌': s[3]}
 
+    def _calc_zihua(self):
+        """自化: 宫干飞四化落本宫(↓离心)或对宫(↑向心)"""
+        zihua = {}  # {zhi_idx: {star_name: [tags]}}
+
+        # First, mark 生年四化
+        hua_labels = {'化禄': '生年禄', '化权': '生年权', '化科': '生年科', '化忌': '生年忌'}
+        for hua_type, star in self.sihua.items():
+            for zhi, star_list in self.stars.items():
+                if star in star_list:
+                    if zhi not in zihua:
+                        zihua[zhi] = {}
+                    if star not in zihua[zhi]:
+                        zihua[zhi][star] = []
+                    label = hua_labels[hua_type]
+                    if label not in zihua[zhi][star]:
+                        zihua[zhi][star].append(label)
+
+        # Then, 宫干自化
+        hua_types_short = ['禄', '权', '科', '忌']
+        for zhi in range(12):
+            gan = self.palace_gans[zhi]
+            s = SIHUA_TABLE[gan]
+            opposite_zhi = (zhi + 6) % 12
+
+            for hua_type, star in zip(hua_types_short, s):
+                # 离心(↓): star in this palace → self-transformation outwards
+                if star in self.stars.get(zhi, []):
+                    if zhi not in zihua:
+                        zihua[zhi] = {}
+                    if star not in zihua[zhi]:
+                        zihua[zhi][star] = []
+                    # Don't add if 生年 same type already exists
+                    existing_tags = zihua[zhi][star]
+                    has_shengnian = any('生年' in t for t in existing_tags)
+                    if f'↓{hua_type}' not in existing_tags:
+                        zihua[zhi][star].append(f'↓{hua_type}')
+                # 向心(↑): star in opposite palace → flows into this palace
+                elif star in self.stars.get(opposite_zhi, []):
+                    if zhi not in zihua:
+                        zihua[zhi] = {}
+                    if star not in zihua[zhi]:
+                        zihua[zhi][star] = []
+                    if f'↑{hua_type}' not in zihua[zhi][star]:
+                        zihua[zhi][star].append(f'↑{hua_type}')
+
+        return zihua
+
     def _calc_grand_limits(self):
-        """大限: 阳男阴女顺行, 阴男阳女逆行, 每宫局数年"""
+        """大限: 阳男阴女顺行, 阴男阳女逆行, 每宫10年, 起始岁=五行局数"""
         is_yang = GAN_YINYANG[TIAN_GAN[self.year_gan]] == 1
         is_male = (self.gender == '男')
         direction = 1 if (is_yang and is_male) or (not is_yang and not is_male) else -1
 
         limits = []
         zhi = self.ming_palace_zhi
-        age = 1
+        age = self.ju  # 起始岁 = 五行局数
         for i in range(12):
             palace_idx = (zhi - self.ming_palace_zhi + 12) % 12
             limits.append({
@@ -332,24 +522,75 @@ class ZiweiChart:
                 '名称': DI_ZHI[zhi],
                 '宫名': PALACE_NAMES[palace_idx],
                 '起始岁': age,
-                '结束岁': age + self.ju - 1,
+                '结束岁': age + 9,  # 每个大限10年
             })
-            age += self.ju
+            age += 10
             zhi = (zhi + direction) % 12
         return limits
 
+    def _get_star_tags(self, star_name, zhi):
+        """获取星曜的标签: [庙旺利陷] + [四化] + [自化]"""
+        parts = []
+        # 亮度
+        brightness = _get_star_brightness(star_name, zhi)
+        parts.append(brightness)
+
+        # 四化/自化标签
+        if zhi in self.zihua and star_name in self.zihua[zhi]:
+            for tag in self.zihua[zhi][star_name]:
+                parts.append(tag)
+
+        return parts
+
+    def _format_star_with_tags(self, star_name, zhi):
+        """格式化星曜: 星名[亮度][四化标签]..."""
+        tags = self._get_star_tags(star_name, zhi)
+        if tags:
+            return star_name + ''.join(f'[{t}]' for t in tags)
+        return star_name
+
+    def _get_palace_display_data(self, zhi):
+        """获取单个宫的显示数据"""
+        p = self.palaces.get(zhi, {})
+        stars = p.get('星曜', [])
+        
+        main_stars = [s for s in stars if s in MAIN_STARS]
+        aux_stars = [s for s in stars if s in AUX_STARS]
+        minor_stars = [s for s in stars if s not in MAIN_STARS and s not in AUX_STARS]
+
+        main_strs = [self._format_star_with_tags(s, zhi) for s in main_stars]
+        aux_strs = [self._format_star_with_tags(s, zhi) for s in aux_stars]
+        minor_strs = [self._format_star_with_tags(s, zhi) for s in minor_stars]
+
+        return {
+            '宫名': p.get('宫名', ''),
+            '天干': p.get('天干', ''),
+            '地支': p.get('地支', ''),
+            '主星': ', '.join(main_strs) if main_strs else '',
+            '辅星': ', '.join(aux_strs) if aux_strs else '',
+            '小星': ', '.join(minor_strs) if minor_strs else '',
+            '神煞': p.get('神煞', {}),
+            '大限': self._get_grand_limit_for_palace(zhi),
+            '小限': p.get('小限', []),
+            '流年': p.get('流年', []),
+            '序号': p.get('序号', 0),
+        }
+
+    def _get_grand_limit_for_palace(self, zhi):
+        """获取某宫的大限信息"""
+        for gl in self.grand_limits:
+            if gl['宫位'] == zhi:
+                return f"{gl['起始岁']}~{gl['结束岁']}虚岁"
+        return ''
+
     def to_dict(self):
+        """保留旧接口的字典输出"""
         sorted_palaces = []
         for zhi in range(12):
             if zhi in self.palaces:
                 sorted_palaces.append(self.palaces[zhi])
 
-        # 月柱: 五虎遁起寅月
         month_gan_idx = (WU_HU_DUN[self.year_gan] + self.lunar_month - 1) % 10
-        month_zhi_idx = (self.lunar_month + 1) % 12  # 寅=2, 正月(lm=1)→寅(2→2+1=3? 不对)
-
-        # 修正: 正月为寅(2), 二月为卯(3), ...
-        # lunar_month=1 → zhi_idx=2
         month_zhi_idx = (self.lunar_month + 1) % 12
 
         return {
@@ -376,9 +617,9 @@ class ZiweiChart:
             },
             '身宫': {
                 '地支': DI_ZHI[self.shen_palace_zhi],
-                '宫位': PALACE_NAMES[(self.shen_palace_zhi - self.ming_palace_zhi + 12) % 12],
+                '宫位': PALACE_NAMES[(self.ming_palace_zhi - self.shen_palace_zhi + 12) % 12],
             },
-            '五行局': self.ju,
+            '五行局': JU_NAMES[self.ju],
             '四化': self.sihua,
             '大限': self.grand_limits,
             '十二宫': sorted_palaces,
@@ -386,79 +627,149 @@ class ZiweiChart:
 
 
 # ========================================================================
-# 星盘文本
+# 辅助函数
 # ========================================================================
 
-def _stars_abbrev(stars, max_n=4):
-    if not stars:
-        return "空"
-    s = " ".join(stars[:max_n])
-    if len(stars) > max_n:
-        s += "…"
-    return s
+def _star_sort_key(name):
+    """排序键: 主星=0, 辅星=1, 小星=2"""
+    if name in MAIN_STARS:
+        return 0
+    if name in AUX_STARS:
+        return 1
+    return 2
+
+
+def _format_age_list(ages):
+    """格式化岁数列表: 11,23,35,47,59虚岁"""
+    return ','.join(str(a) for a in ages) + '虚岁'
+
+
+def _make_tree_line(indent, label, value):
+    """生成树形行: ├XXX : YYY"""
+    prefix = '│' * indent if indent > 0 else ''
+    branch = '├' if indent >= 0 else ''
+    if indent == 0:
+        return f'{prefix}{branch}{label}'
+    return f'{prefix}{branch}{label} : {value}'
+
+
+# ========================================================================
+# 文墨天机格式渲染
+# ========================================================================
 
 def render_chart(chart):
-    d = chart.to_dict()
+    """渲染文墨天机风格命盘"""
     lines = []
-    lines.append("=" * 66)
-    lines.append("  紫 微 斗 数 命 盘")
-    lines.append(f"  公历: {d['输入']['公历']}")
-    ly_info = f"{d['农历']['年']}年"
-    if d['农历']['闰月']:
-        ly_info += f"闰{d['农历']['月']}月"
-    else:
-        ly_info += f"{d['农历']['月']}月"
-    ly_info += f"{d['农历']['日']}日"
-    lines.append(f"  农历: {ly_info}")
-    lines.append(f"  性别: {d['输入']['性别']}")
-    lines.append(f"  四柱: {d['四柱']['年柱']} {d['四柱']['月柱']} {d['四柱']['日柱']} {d['四柱']['时柱']}")
-    lines.append(f"  命宫: {d['命宫']['干支']}  身宫: {d['身宫']['地支']}({d['身宫']['宫位']})")
-    lines.append(f"  五行局: {d['五行局']}局")
-    lines.append(f"  四化: 禄({d['四化']['化禄']}) 权({d['四化']['化权']}) 科({d['四化']['化科']}) 忌({d['四化']['化忌']})")
-    lines.append("=" * 66)
 
-    # 星盘4列布局
-    layout = [[5,6,7,8],[4,-1,-1,9],[3,2,1,0]]
-    center_info = f" {d['命宫']['干支']} 局{d['五行局']} "
+    # ===== 基本信息 =====
+    lines.append('├基本信息')
 
-    for row in layout:
-        r0, r1, r2, sep = "", "", "", ""
-        for col_idx, zhi in enumerate(row):
-            sep += "├──────────"
-            if zhi == -1:
-                if col_idx == 1:
-                    r0 += f"│{center_info:^10}"
-                else:
-                    r0 += "│          "
-                r1 += "│          "
-                r2 += "│          "
-            else:
-                p = chart.palaces.get(zhi, {})
-                r0 += f"│{DI_ZHI[zhi]:^10}"
-                r1 += f"│{p.get('宫名',''):^10}"
-                r2 += f"│{_stars_abbrev(p.get('星曜',[])):^10}"
-        sep += "┤"
-        lines.append(f"{r0}│")
-        lines.append(f"{r1}│")
-        lines.append(f"{r2}│")
-        lines.append(sep)
+    # 性别
+    lines.append(f'│ ├性别 : {chart.gender}')
 
-    lines.append("─" * 66)
-    lines.append("  大限:")
-    for gl in d['大限']:
-        lines.append(f"    {gl['名称']}({gl['宫名']}): {gl['起始岁']}~{gl['结束岁']}岁")
+    # 钟表时间
+    lines.append(f'│ ├钟表时间 : {chart.solar_year}-{chart.solar_month:02d}-{chart.solar_day:02d} {chart.hour:02d}:{chart.minute:02d}')
 
-    lines.append("─" * 66)
-    lines.append("  各宫星曜总览:")
-    for zhi in range(12):
-        p = chart.palaces.get(zhi, {})
-        ss = p.get('星曜', [])
-        if ss:
-            lines.append(f"    {DI_ZHI[zhi]}({p['宫名']}): {' '.join(ss)}")
+    # 农历时间
+    lunar_month_names = ['正','二','三','四','五','六','七','八','九','十','冬','腊']
+    lunar_day_names = ['初一','初二','初三','初四','初五','初六','初七','初八','初九','初十',
+                       '十一','十二','十三','十四','十五','十六','十七','十八','十九','二十',
+                       '廿一','廿二','廿三','廿四','廿五','廿六','廿七','廿八','廿九','三十']
+    lm_name = lunar_month_names[chart.lunar_month - 1]
+    ld_name = lunar_day_names[chart.lunar_day - 1] if chart.lunar_day <= 30 else f'{chart.lunar_day}日'
+    leap_str = '闰' if chart.lunar_is_leap else ''
+    year_ganzhi = TIAN_GAN[chart.year_gan] + DI_ZHI[chart.year_zhi]
+    
+    # 时辰名
+    hour_names = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥']
+    hour_name = hour_names[chart.hour_zhi]
+    
+    lines.append(f'│ ├农历时间 : {year_ganzhi}年{leap_str}{lm_name}月{ld_name}{hour_name}时')
+
+    # 节气四柱
+    month_gan_idx = (WU_HU_DUN[chart.year_gan] + chart.lunar_month - 1) % 10
+    month_zhi_idx = (chart.lunar_month + 1) % 12
+    lines.append(f'│ ├节气四柱 : {TIAN_GAN[chart.year_gan]}{DI_ZHI[chart.year_zhi]} '
+                 f'{TIAN_GAN[month_gan_idx]}{DI_ZHI[month_zhi_idx]} '
+                 f'{TIAN_GAN[chart.day_gan]}{DI_ZHI[chart.day_zhi]} '
+                 f'{TIAN_GAN[chart.hour_gan]}{DI_ZHI[chart.hour_zhi]}')
+
+    # 五行局
+    ju_name = JU_NAMES.get(chart.ju, f'{chart.ju}局')
+    lines.append(f'│ ├五行局数 : {ju_name}')
+
+    # 身主/命主/斗君/身宫
+    shen_gong_name = PALACE_NAMES[(chart.ming_palace_zhi - chart.shen_palace_zhi + 12) % 12]
+    dou_jun_zhi = DI_ZHI[chart.dou_jun]
+    shen_zhi = DI_ZHI[chart.shen_palace_zhi]
+    lines.append(f'│ └身主:{chart.shen_zhu}; 命主:{chart.ming_zhu}; 子年斗君:{dou_jun_zhi}; 身宫:{shen_zhi}')
+
+    lines.append('│')
+
+    # ===== 命盘十二宫 =====
+    lines.append('├命盘十二宫')
+
+    # 构建各宫显示数据 (按逆时针顺序)
+    palace_displays = []
+    zhi = chart.ming_palace_zhi
+    for pi in range(12):
+        pd = chart._get_palace_display_data(zhi)
+        palace_displays.append(pd)
+        zhi = (zhi - 1) % 12
+
+    for idx, pd in enumerate(palace_displays):
+        is_last_palace = (idx == len(palace_displays) - 1)
+        palace_branch = '└' if is_last_palace else '├'
+
+        # 宫头: ├命宫[辛亥] or └命宫[辛亥]
+        lines.append(f'{palace_branch} {pd["宫名"]}[{pd["天干"]}{pd["地支"]}]')
+
+        # 构建该宫的所有子行
+        sub_lines = []
+        has_aux = bool(pd['辅星'])
+        has_minor = bool(pd['小星'])
+
+        # 主星
+        if pd['主星']:
+            sub_lines.append(('主星', f'主星 : {pd["主星"]}'))
         else:
-            lines.append(f"    {DI_ZHI[zhi]}({p['宫名']}): 无主星")
-    lines.append("=" * 66)
-    return "\n".join(lines)
+            sub_lines.append(('主星', f'主星 : 无'))
+
+        # 辅星
+        if has_aux:
+            sub_lines.append(('辅星', f'辅星 : {pd["辅星"]}'))
+
+        # 小星
+        if has_minor:
+            sub_lines.append(('小星', f'小星 : {pd["小星"]}'))
+
+        # 神煞 (group header)
+        sub_lines.append(('神煞_begin', '神煞'))
+
+        shen = pd['神煞']
+        sub_lines.append(('神煞_item', f'├岁前星 : {shen.get("岁前星", "")}'))
+        sub_lines.append(('神煞_item', f'├将前星 : {shen.get("将前星", "")}'))
+        sub_lines.append(('神煞_item', f'├十二长生 : {shen.get("十二长生", "")}'))
+        sub_lines.append(('神煞_item', f'└太岁煞禄 : {shen.get("太岁煞禄", "")}'))
+
+        sub_lines.append(('大限', f'大限 : {pd["大限"]}'))
+        sub_lines.append(('小限', f'小限 : {_format_age_list(pd["小限"])}'))
+        sub_lines.append(('流年', f'流年 : {_format_age_list(pd["流年"])}'))
+        sub_lines.append(('限流叠宫', f'限流叠宫 : 无'))
+
+        # 渲染子行
+        for i, (key, text) in enumerate(sub_lines):
+            is_last_sub = (i == len(sub_lines) - 1)
+            if key == '神煞_begin':
+                lines.append(f'│ ├{text}')
+            elif key == '神煞_item':
+                # 神煞项目: 用│ │前缀
+                lines.append(f'│ │ {text}')
+            else:
+                sub_branch = '└' if is_last_sub else '├'
+                lines.append(f'│ {sub_branch}{text}')
+
+    return '\n'.join(lines)
 
 
 # ========================================================================
@@ -467,10 +778,11 @@ def render_chart(chart):
 
 def main():
     if len(sys.argv) < 7:
-        print("用法: python3 ziwei.py <year> <month> <day> <hour> <minute> <gender>")
+        print("用法: python3 ziwei.py <year> <month> <day> <hour> <minute> <gender> [--longitude 经度]")
         print("  year/month/day: 公历日期")
         print("  hour/minute:    出生时间 (24小时制)")
         print("  gender:         男/女")
+        print("  --longitude:    地理经度(东经正数)，用于真太阳时修正")
         sys.exit(1)
 
     year = int(sys.argv[1])
@@ -479,6 +791,19 @@ def main():
     hour = int(sys.argv[4])
     minute = int(sys.argv[5])
     gender = sys.argv[6]
+    longitude = None
+
+    # 解析可選参数
+    for i, a in enumerate(sys.argv[7:], start=7):
+        if a == '--longitude' and i + 1 < len(sys.argv):
+            longitude = float(sys.argv[i + 1])
+
+    # 真太阳时修正
+    if longitude is not None:
+        from zhexue_core import solar_time_correction
+        corr_h, corr_m = solar_time_correction(longitude, year, month, day, hour, minute)
+        print(f"# 真太阳时修正: {hour:02d}:{minute:02d} → {int(corr_h):02d}:{int(corr_m):02d} (经度{longitude})", file=sys.stderr)
+        hour, minute = int(corr_h), int(corr_m)
 
     gender_map = {'M':'男','m':'男','male':'男','F':'女','f':'女','female':'女'}
     if gender in gender_map:
@@ -488,6 +813,7 @@ def main():
         sys.exit(1)
 
     chart = ZiweiChart(year, month, day, hour, minute, gender)
+    # Also output JSON for machine consumption
     data = chart.to_dict()
     print(json.dumps(data, ensure_ascii=False, indent=2))
     print()

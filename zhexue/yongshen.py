@@ -3,7 +3,7 @@
 用神算法 — 移植自问真八字App（YongShenTool.java）
 根据日干五行 + 四柱藏干权重 + 月令系数 → 判旺衰 → 定用神忌神
 """
-import sys, os, json
+import sys, json
 
 # ========== 五行映射（与 BZTool.t() 一致）==========
 GAN_WUXING = {
@@ -185,7 +185,7 @@ def calc_yongshen(pillar_ganzhi_list):
 
 
 # ========== CLI 入口 ==========
-def main():
+if __name__ == '__main__':
     if len(sys.argv) < 6:
         print("用法: yongshen.py <year> <month> <day> <hour> <male/female> [minute]")
         print("示例: yongshen.py 1990 5 15 12 male")
@@ -206,17 +206,37 @@ def main():
         sys.exit(0)
 
     # 新格式: 年 月 日 时 分 性别 (与 bazi.py 一致)
-    year, month, day = int(sys.argv[1]), int(sys.argv[2]), int(sys.argv[3])
-    hour = int(sys.argv[4])
-    minute = int(sys.argv[5])
-    gender = sys.argv[6]
+    args = sys.argv[1:]
+    longitude = None
+    clean = []
+    skip = False
+    for i, a in enumerate(args):
+        if skip:
+            skip = False
+            continue
+        if a == '--longitude':
+            longitude = float(args[i+1]) if i+1 < len(args) else None
+            skip = True
+            continue
+        clean.append(a)
+    
+    year, month, day = int(clean[0]), int(clean[1]), int(clean[2])
+    hour = int(clean[3])
+    minute = int(clean[4])
+    gender = clean[5]
+
+    # 真太阳时修正
+    if longitude is not None:
+        from zhexue_core import solar_time_correction
+        corr_h, corr_m = solar_time_correction(longitude, year, month, day, hour, minute)
+        hour, minute = int(corr_h), int(corr_m)
 
     gender_map = {'male':'男','female':'女','男':'男','女':'女'}
     gender_cn = gender_map.get(gender, '男')
     gender_bazi = 'male' if gender in ('male','男') else 'female'
 
     # 调用 bazi.py 的 pillar_info 计算八字
-    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
     from bazi import pillar_info
     bazi_result = pillar_info(year, month, day, hour, minute, gender_bazi)
 
@@ -234,7 +254,3 @@ def main():
     result['input'] = {'year': year, 'month': month, 'day': day, 'hour': hour, 'minute': minute, 'gender': gender_cn}
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
-
-
-if __name__ == '__main__':
-    main()

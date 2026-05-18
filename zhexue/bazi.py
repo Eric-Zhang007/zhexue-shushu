@@ -3,10 +3,10 @@
 八字排盘 增强版 — 匹配问真八字APP全部信息
 输出：四柱完整信息（主星·天干·地支·藏干·星运·自坐·空亡·纳音·神煞）+大运+流年+流月
 """
-import sys, json, os
+import sys, json
 from datetime import datetime, timedelta
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
 from zhexue_core import (
     TIAN_GAN, DI_ZHI, GAN_WUXING, GAN_YINYANG, ZHI_WUXING,
     day_ganzhi_from_date, hour_zhi_index, hour_ganzhi,
@@ -458,6 +458,8 @@ def main():
     query_liuri = None
     query_liushi = None
     liunian_year = None
+    longitude = None
+    no_solar_eot = False
     
     args = sys.argv[1:]
     
@@ -484,6 +486,13 @@ def main():
             query_liushi = args[i+1]
             skip_next = True
             continue
+        if a == '--longitude':
+            longitude = float(args[i+1])
+            skip_next = True
+            continue
+        if a == '--no-solar-eot':
+            no_solar_eot = True
+            continue
         clean_args.append(a)
     
     base_args = clean_args
@@ -492,6 +501,13 @@ def main():
     gender = base_args[5] if len(base_args) > 5 else 'male'
     if len(base_args) > 6:
         liunian_year = int(base_args[6])
+    
+    # 真太阳时修正
+    if longitude is not None:
+        from zhexue_core import solar_time_correction
+        corr_h, corr_m = solar_time_correction(longitude, year, month, day, hour, minute)
+        print(f"# 真太阳时修正: {hour:02d}:{minute:02d} → {int(corr_h):02d}:{int(corr_m):02d} (经度{longitude})")
+        hour, minute = int(corr_h), int(corr_m)
     
     gender_map = {'male':'男','female':'女','男':'男','女':'女'}
     result = pillar_info(year, month, day, hour, minute, 'male' if gender in ('male','男') else 'female', liunian_year)
