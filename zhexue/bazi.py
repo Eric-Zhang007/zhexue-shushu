@@ -104,10 +104,10 @@ def pillar_info(year, month, day, hour, minute, gender, liunian_year=None):
     dayun_list = []
     dayun_steps = 12  # 120年，覆盖全生命周期
     if shun_pai:
-        for step in range(dayun_steps):
+        for step in range(1, dayun_steps + 1):
             dg = (m_gan + step) % 10
             dz = (m_zhi + step) % 12
-            age_low = int(start_age) + step * 10
+            age_low = int(start_age) + (step - 1) * 10
             age_high = age_low + 9
             gan_c, zhi_c = TIAN_GAN[dg], DI_ZHI[dz]
             dayun_list.append({
@@ -117,10 +117,10 @@ def pillar_info(year, month, day, hour, minute, gender, liunian_year=None):
                 'shi_shen_zhi': get_shi_shen(d_gan, ZHI_CANG_GAN[dz][0]),
             })
     else:
-        for step in range(dayun_steps):
+        for step in range(1, dayun_steps + 1):
             dg = (m_gan - step) % 10
             dz = (m_zhi - step) % 12
-            age_low = int(start_age) + step * 10
+            age_low = int(start_age) + (step - 1) * 10
             age_high = age_low + 9
             gan_c, zhi_c = TIAN_GAN[dg], DI_ZHI[dz]
             dayun_list.append({
@@ -538,7 +538,7 @@ def main():
         from jieqi_core import get_jieqi
         entry = get_jieqi(ly, lm)
         if entry:
-            from zhexue_core import get_shi_shen, shen_sha_all
+            from zhexue_core import day_ganzhi_from_date, get_shi_shen, shen_sha_all
             from bazi import year_ganzhi, month_gan_correct, get_solar_month_idx_correct
             yg, yz = year_ganzhi(ly, lm, int(entry[1]))
             m_idx = get_solar_month_idx_correct(ly, lm, int(entry[1]))

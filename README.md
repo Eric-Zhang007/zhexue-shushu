@@ -12,9 +12,9 @@
 pip install git+https://github.com/Eric-Zhang007/zhexue-shushu.git
 
 # 安装后即可直接使用（不需要加 python3 前缀）：
-bazi 2007 9 28 20 8 male
+bazi 1986 3 15 12 0 male
 chenggu 丁亥 8 18 戌
-yongshen 2007 9 28 20 8 male
+yongshen 1986 3 15 12 0 male
 ```
 
 ### 方法二：克隆 + 本地安装
@@ -31,9 +31,9 @@ pip install -e .
 git clone https://github.com/Eric-Zhang007/zhexue-shushu.git
 cd zhexue-shushu
 
-python3 zhexue/bazi.py 2007 9 28 20 8 male
+python3 zhexue/bazi.py 1986 3 15 12 0 male
 python3 zhexue/chenggu.py 丁亥 8 18 戌
-python3 zhexue/yongshen.py 2007 9 28 20 8 male
+python3 zhexue/yongshen.py 1986 3 15 12 0 male
 ```
 
 ---
@@ -57,13 +57,13 @@ python3 zhexue/yongshen.py 2007 9 28 20 8 male
 
 ```bash
 # 基础排盘
-bazi 2007 9 28 20 8 male
+bazi 1986 3 15 12 0 male
 
 # 交互查询
-bazi 2007 9 28 20 8 male --liunian 2035     # 流年：干支+十神+神煞完整列表
-bazi 2007 9 28 20 8 male --liuyue 2026-08   # 流月：节气+月柱+十神+神煞
-bazi 2007 9 28 20 8 male --liuri 2028-03-15 # 流日：干支+十神+神煞
-bazi 2007 9 28 20 8 male --liushi 2028-03-15# 流时：12时辰+十神
+bazi 1986 3 15 12 0 male --liunian 2035     # 流年：干支+十神+神煞完整列表
+bazi 1986 3 15 12 0 male --liuyue 2026-08   # 流月：节气+月柱+十神+神煞
+bazi 1986 3 15 12 0 male --liuri 2028-03-15 # 流日：干支+十神+神煞
+bazi 1986 3 15 12 0 male --liushi 2028-03-15# 流时：12时辰+十神
 ```
 
 参数：`<年> <月> <日> <时> <分> <male|female> [流年开始年]`
@@ -73,17 +73,17 @@ bazi 2007 9 28 20 8 male --liushi 2028-03-15# 流时：12时辰+十神
 ### 输出样例
 
 ```
-四柱: 丁亥 己酉 乙丑 丙戌
-起运: 6.83岁 逆排  日主: 乙木 死
-用神: 木  忌神:金  身弱
-称骨: 五两五钱 (年16+月15+日18+时6=55)
-神煞: 23次命中 (年6+月6+日5+时6)
+四柱: 丙寅 辛卯 戊午 戊午
+起运: 6.97岁 顺排  日主: 戊土 死
+用神: 水  忌神:土  身旺
+称骨: (示例)
+神煞: 10次命中 (太极 福星 十灵 六秀 孤鸾 将星2 天医 桃花 九丑 羊刃2)
 ```
 
 ## 用神分析 `yongshen`
 
 ```bash
-yongshen 2007 9 28 20 8 male
+yongshen 1986 3 15 12 0 male
 
 # 或直接传原生干支
 yongshen --raw 丁 亥 己 酉 乙 丑 丙 戌
@@ -156,7 +156,7 @@ r = shen_sha_all('丁','亥','己','酉','乙','丑','丙','戌')
 | 框架 | 用法 |
 |-----|------|
 | **Claude Code** | 在任意项目中 `claude` 后可自然语言描述「算一下张三的生辰八字」，Claude 会自动调用 `bazi` 命令 |
-| **Codex** | `codex` 环境下直接执行 `bazi 2007 9 28 20 8 male` |
+| **Codex** | `codex` 环境下直接执行 `bazi 1986 3 15 12 0 male` |
 | **Hermes Agent** | 如安装为 skill（`hermes skill install zhexue-shushu`），agent 自动获得完整上下文；否则直接 `python3 zhexue/bazi.py ...` |
 | **OpenCode** | `opencode` 环境中直接运行 `bazi ...` |
 | **任意 CLI** | 安装后 `bazi` / `chenggu` / `yongshen` 是全局命令，任何 terminal 都能用 |
@@ -174,13 +174,12 @@ r = shen_sha_all('丁','亥','己','酉','乙','丑','丙','戌')
 ## 验证案例
 
 ```
-2007-09-28 20:08 男
+1986-03-15 12:00 男
 
-八字: 丁亥 己酉 乙丑 丙戌
-起运: 6.83岁 逆排  日主: 乙木 死
-用神: 木  忌神:金  身弱
-称骨: 五两五钱 (年16+月15+日18+时6=55)
-神煞: 23次命中 (年6+月6+日5+时6)
+八字: 丙寅 辛卯 戊午 戊午
+起运: 6.97岁 顺排  日主: 戊土 死
+用神: 水  忌神:土  身旺
+神煞: 10次命中 (太极 福星 十灵 六秀 孤鸾 将星2 天医 桃花 九丑 羊刃2)
 ```
 
 ---

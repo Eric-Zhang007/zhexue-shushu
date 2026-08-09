@@ -13,6 +13,9 @@
 - **十二长生验证**: 120/120 与 App LUT 完全一致
 - **起运年龄**: 从 stuck=6 改为精确节气天数÷3
 
+## 2026-05-31: 数据路径修正
+- jieqi_core.py: 硬编码 `/tmp/jieqi_data.txt` 改为 `__file__` 相对路径解析（scripts/../data/jieqi_data.txt），不再依赖 /tmp
+
 ## 2026-05-17: 基础修正
 - 日柱参考点从庚子修正为甲戌
 - 月柱五虎遁公式修正（solar_idx 减1偏移）

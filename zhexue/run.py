@@ -10,6 +10,7 @@ SCRIPTS = {
     'qimen':    {'file':'qimen.py',    'desc':'奇门遁甲',      'args':'<年> <月> <日> <时> <分>'},
     'liuren':   {'file':'liuren.py',   'desc':'大六壬',        'args':'<年> <月> <日> <时> <分>'},
     'ziwei':    {'file':'ziwei.py',    'desc':'紫微斗数',      'args':'<年> <月> <日> <时> <分> <male/female>'},
+    'liuyao':   {'file':'liuyao.py',   'desc':'六爻纳甲筮法',  'args':'coin|time|manual [params...] [-q question]'},
     'yongshen': {'file':'yongshen.py', 'desc':'用神忌神算法',   'args':'<年干> <年支> <月干> <月支> <日干> <日支> <时干> <时支>'},
     'chenggu':  {'file':'chenggu.py',  'desc':'称骨算命',      'args':'<年干支> <农历月> <农历日> <时(0-23)>'},
 }

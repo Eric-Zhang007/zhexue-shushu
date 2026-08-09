@@ -4,10 +4,13 @@ JieQiCore - Python port of 问真八字 App's 节气/起运 calculation engine.
 Extracted via decompilation of dex_main.dex.
 """
 import re
+import os
 from datetime import datetime, timedelta
 
-# Load the full 节气 data string (1800-2100)
-_DATA_RAW = open('/tmp/jieqi_data.txt', 'r', encoding='utf-8').read()
+# Resolve data file relative to script location (works in Hermes and standalone)
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+_DATA_PATH = os.path.join(_SCRIPT_DIR, '..', 'data', 'jieqi_data.txt')
+_DATA_RAW = open(_DATA_PATH, 'r', encoding='utf-8').read()
 
 # Parse into: year -> { month_index -> [节气名, 日(string), 时间(string)] }
 # month_index: 1=寅月(立春), 2=卯月(惊蛰), ..., 12=丑月(小寒)

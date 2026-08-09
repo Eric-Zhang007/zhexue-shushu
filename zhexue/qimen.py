@@ -36,31 +36,34 @@ def correct_xunkong(gan_idx, zhi_idx):
 
 # ========== 二十四节气定局 ==========
 # 阳遁: 冬至→夏至  阴遁: 夏至→冬至
+# 元局: 上元|中元|下元 (存为三位数, 如174=上1中7下4)
+# 拆补法固定用局表 (奇门遁甲标准)
 SOLAR_TERMS = [
-    ('冬至', 12, 22,  1, 1),
-    ('小寒',  1,  6,  1, 2),
-    ('大寒',  1, 20,  1, 3),
-    ('立春',  2,  4,  1, 8),
-    ('雨水',  2, 19,  1, 9),
-    ('惊蛰',  3,  6,  1, 1),
-    ('春分',  3, 21,  1, 3),
-    ('清明',  4,  5,  1, 4),
-    ('谷雨',  4, 20,  1, 5),
-    ('立夏',  5,  5,  1, 4),
-    ('小满',  5, 21,  1, 5),
-    ('芒种',  6,  6,  1, 6),
-    ('夏至',  6, 21, -1, 9),
-    ('小暑',  7,  7, -1, 8),
-    ('大暑',  7, 23, -1, 7),
-    ('立秋',  8,  7, -1, 2),
-    ('处暑',  8, 23, -1, 1),
-    ('白露',  9,  7, -1, 9),
-    ('秋分',  9, 23, -1, 7),
-    ('寒露', 10,  8, -1, 6),
-    ('霜降', 10, 23, -1, 5),
-    ('立冬', 11,  7, -1, 6),
-    ('小雪', 11, 22, -1, 5),
-    ('大雪', 12,  7, -1, 4),
+    # (名称, 月, 约日, 方向, 上元局, 中元局, 下元局)
+    ('冬至', 12, 22,  1, 1, 7, 4),
+    ('小寒',  1,  6,  1, 2, 8, 5),
+    ('大寒',  1, 20,  1, 3, 9, 6),
+    ('立春',  2,  4,  1, 8, 5, 2),
+    ('雨水',  2, 19,  1, 9, 6, 3),
+    ('惊蛰',  3,  6,  1, 1, 7, 4),
+    ('春分',  3, 21,  1, 3, 9, 6),
+    ('清明',  4,  5,  1, 4, 1, 7),
+    ('谷雨',  4, 20,  1, 5, 2, 8),
+    ('立夏',  5,  5,  1, 4, 1, 7),
+    ('小满',  5, 21,  1, 5, 2, 8),
+    ('芒种',  6,  6,  1, 6, 3, 9),
+    ('夏至',  6, 21, -1, 9, 3, 6),
+    ('小暑',  7,  7, -1, 8, 2, 5),
+    ('大暑',  7, 23, -1, 7, 1, 4),
+    ('立秋',  8,  7, -1, 2, 5, 8),
+    ('处暑',  8, 23, -1, 1, 4, 7),
+    ('白露',  9,  7, -1, 9, 3, 6),
+    ('秋分',  9, 23, -1, 7, 1, 4),
+    ('寒露', 10,  8, -1, 6, 9, 3),
+    ('霜降', 10, 23, -1, 5, 8, 2),
+    ('立冬', 11,  7, -1, 6, 9, 3),
+    ('小雪', 11, 22, -1, 5, 8, 2),
+    ('大雪', 12,  7, -1, 4, 7, 1),
 ]
 
 # 洛书九宫 → 地支映射
@@ -104,37 +107,36 @@ DI_ZHI_IDX = {z: i for i, z in enumerate(DI_ZHI)}
 # ==================== 辅助函数 ====================
 
 def find_solar_term(year, month, day):
-    """查找当前节气，返回 (名称, 方向, 上元局数, 距节气首日日数)"""
+    """查找当前节气，返回 (名称, 方向, 上元局, 中元局, 下元局, 距节气首日日数)"""
     dt = datetime(year, month, day)
     # 生成节气日期列表 (考虑跨年)
     terms = []
-    for name, m, d, direction, base in SOLAR_TERMS:
+    for name, m, d, direction, ju_upper, ju_middle, ju_lower in SOLAR_TERMS:
         y = year
         if m == 12 and month == 1:
             y = year - 1  # 冬至在去年12月
         elif m == 1 and month == 12:
             y = year + 1  # 小寒在明年1月
-        terms.append((name, direction, base, datetime(y, m, d)))
+        terms.append((name, direction, ju_upper, ju_middle, ju_lower, datetime(y, m, d)))
 
     # 按时间排序
-    terms.sort(key=lambda t: t[3])
+    terms.sort(key=lambda t: t[5])
 
     # 找到当前所在的节气区间
-    for i, (name, direction, base, td) in enumerate(terms):
-        next_td = terms[(i + 1) % len(terms)][3]
+    for i, (name, direction, ju_u, ju_m, ju_l, td) in enumerate(terms):
+        next_td = terms[(i + 1) % len(terms)][5]
         if i == len(terms) - 1:
-            # 最后一个节气，检查是否在其区间
             if td <= dt:
                 days_diff = (dt - td).days
-                return name, direction, base, days_diff
+                return name, direction, ju_u, ju_m, ju_l, days_diff
         elif td <= dt < next_td:
             days_diff = (dt - td).days
-            return name, direction, base, days_diff
+            return name, direction, ju_u, ju_m, ju_l, days_diff
 
     # 兜底：找最近的节气
-    closest = min(terms, key=lambda t: abs((dt - t[3]).days))
-    days_diff = (dt - closest[3]).days
-    return closest[0], closest[1], closest[2], max(0, days_diff)
+    closest = min(terms, key=lambda t: abs((dt - t[5]).days))
+    days_diff = (dt - closest[5]).days
+    return closest[0], closest[1], closest[2], closest[3], closest[4], max(0, days_diff)
 
 
 def get_yuan(days_since_term):
@@ -142,9 +144,10 @@ def get_yuan(days_since_term):
     return (days_since_term // 5) % 3
 
 
-def get_game_number(base_ju, yuan, direction):
-    """局数：每个节气固定，三元不影响局数"""
-    return base_ju
+def get_game_number(ju_upper, ju_middle, ju_lower, yuan):
+    """局数：上元/中元/下元 用对应的局数"""
+    ju_table = [ju_upper, ju_middle, ju_lower]
+    return ju_table[yuan]
 
 
 def get_direction_name(direction):
@@ -508,10 +511,10 @@ def calculate_qimen(year, month, day, hour, minute):
     result['hour_ganzhi'] = f'{TIAN_GAN[hour_gan_idx]}{DI_ZHI[hour_zhi]}'
 
     # ---------- 节气定局 ----------
-    term_name, direction, base_ju, days_since_term = find_solar_term(year, month, day)
+    term_name, direction, ju_upper, ju_middle, ju_lower, days_since_term = find_solar_term(year, month, day)
     result['solar_term'] = term_name
     result['direction'] = direction
-    result['base_ju'] = base_ju
+    result['base_ju'] = ju_upper
     result['days_since_term'] = days_since_term
 
     # 三元确定
@@ -520,8 +523,8 @@ def calculate_qimen(year, month, day, hour, minute):
     result['yuan'] = yuan
     result['yuan_name'] = yuan_names[yuan]
 
-    # 局数
-    ju = get_game_number(base_ju, yuan, direction)
+    # 局数：根据三元取对应局数
+    ju = get_game_number(ju_upper, ju_middle, ju_lower, yuan)
     result['ju'] = ju
 
     # ---------- 地盘 ----------
