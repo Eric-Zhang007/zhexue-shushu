@@ -13,7 +13,7 @@ pip install git+https://github.com/Eric-Zhang007/zhexue-shushu.git
 
 # 安装后即可直接使用（不需要加 python3 前缀）：
 bazi 1986 3 15 12 0 male
-chenggu 丁亥 8 18 戌
+chenggu 丙寅 2 6 午
 yongshen 1986 3 15 12 0 male
 liuyao manual 1 1 0 1 0 1 0 2 0 0 3 0
 ```
@@ -33,7 +33,7 @@ git clone https://github.com/Eric-Zhang007/zhexue-shushu.git
 cd zhexue-shushu
 
 python3 zhexue/bazi.py 1986 3 15 12 0 male
-python3 zhexue/chenggu.py 丁亥 8 18 戌
+python3 zhexue/chenggu.py 丙寅 2 6 午
 python3 zhexue/yongshen.py 1986 3 15 12 0 male
 python3 zhexue/liuyao.py manual 1 1 0 1 0 1 0 2 0 0 3 0
 ```
@@ -89,17 +89,17 @@ bazi 1986 3 15 12 0 male --liushi 2028-03-15# 流时：12时辰+十神
 yongshen 1986 3 15 12 0 male
 
 # 或直接传原生干支
-yongshen --raw 丁 亥 己 酉 乙 丑 丙 戌
+yongshen --raw 丙 寅 辛 卯 戊 午 戊 午
 ```
 
 输出 JSON：
 ```json
 {
-  "yongshen": "木",
-  "jishen": "金",
-  "judgement": "身弱",
-  "self_strength": 1.2072,
-  "other_strength": 3.7928
+  "yongshen": "水",
+  "jishen": "土",
+  "judgement": "身旺",
+  "self_strength": 2.8473,
+  "other_strength": 2.1527
 }
 ```
 
@@ -108,7 +108,7 @@ yongshen --raw 丁 亥 己 酉 乙 丑 丙 戌
 > ⚠ 必须用农历日期！不是公历。
 
 ```bash
-chenggu 丁亥 8 18 戌
+chenggu 丙寅 2 6 午
 ```
 
 参数：`<年干支> <农历月> <农历日> <时辰>`
@@ -158,8 +158,8 @@ liuyao manual 1 0 1 1 0 1
 ```python
 from zhexue.zhexue_core import shen_sha_all
 
-r = shen_sha_all('丁','亥','己','酉','乙','丑','丙','戌')
-# 返回 {'天乙贵人': ['年','月'], '文昌贵人': ['月'], ...}
+r = shen_sha_all('丙','寅','辛','卯','戊','午','戊','午')
+# 返回 {'太极贵人': ['月'], '福星贵人': ['年'], '十灵日': ['日'], ...}
 ```
 
 神煞名称与含义详见 `references/shensha-references.txt`。
