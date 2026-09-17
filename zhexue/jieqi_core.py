@@ -9,7 +9,11 @@ from datetime import datetime, timedelta
 
 # Resolve data file relative to script location (works in Hermes and standalone)
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-_DATA_PATH = os.path.join(_SCRIPT_DIR, '..', 'data', 'jieqi_data.txt')
+_DATA_CANDIDATES = [
+    os.path.join(_SCRIPT_DIR, 'data', 'jieqi_data.txt'),        # 包内布局（pip 安装 / 仓库）
+    os.path.join(_SCRIPT_DIR, '..', 'data', 'jieqi_data.txt'),  # 同级布局（scripts/ 与 data/ 并列）
+]
+_DATA_PATH = next((p for p in _DATA_CANDIDATES if os.path.exists(p)), _DATA_CANDIDATES[0])
 _DATA_RAW = open(_DATA_PATH, 'r', encoding='utf-8').read()
 
 # Parse into: year -> { month_index -> [节气名, 日(string), 时间(string)] }

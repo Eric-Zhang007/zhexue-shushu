@@ -14,12 +14,12 @@ CLI: python3 qimen.py <year> <month> <day> <hour> <minute>
 注意：中五寄坤仅天盘天禽星，地盘不寄坤
 """
 
-import sys
+import sys, os
 import json
 import math
 from datetime import datetime, timedelta
 
-sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zhexue_core import *
 
 # ========== 辅助函数 ==========

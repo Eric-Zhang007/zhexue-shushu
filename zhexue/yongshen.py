@@ -3,7 +3,7 @@
 用神算法 — 移植自问真八字App（YongShenTool.java）
 根据日干五行 + 四柱藏干权重 + 月令系数 → 判旺衰 → 定用神忌神
 """
-import sys, json
+import sys, os, json
 
 # ========== 五行映射（与 BZTool.t() 一致）==========
 GAN_WUXING = {
@@ -185,7 +185,7 @@ def calc_yongshen(pillar_ganzhi_list):
 
 
 # ========== CLI 入口 ==========
-if __name__ == '__main__':
+def main():
     if len(sys.argv) < 6:
         print("用法: yongshen.py <year> <month> <day> <hour> <male/female> [minute]")
         print("示例: yongshen.py 1990 5 15 12 male")
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     gender_bazi = 'male' if gender in ('male','男') else 'female'
 
     # 调用 bazi.py 的 pillar_info 计算八字
-    sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from bazi import pillar_info
     bazi_result = pillar_info(year, month, day, hour, minute, gender_bazi)
 
@@ -254,3 +254,6 @@ if __name__ == '__main__':
     result['input'] = {'year': year, 'month': month, 'day': day, 'hour': hour, 'minute': minute, 'gender': gender_cn}
 
     print(json.dumps(result, ensure_ascii=False, indent=2))
+
+if __name__ == '__main__':
+    main()

@@ -14,13 +14,13 @@
   python3 liuyao.py manual-short 1 0 1 1 0 1           # 简写模式（仅本卦，自动判动爻）
 """
 
-import sys
+import sys, os
 import json
 import random
 from datetime import datetime
 
 # Import shared utilities from zhexue_core
-sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zhexue_core import (
     TIAN_GAN, DI_ZHI,
     GAN_WUXING, ZHI_WUXING,
@@ -36,13 +36,15 @@ from jieqi_core import get_solar_month_idx
 # 八卦 → 索引 (标准先天八卦数: 乾1兑2离3震4巽5坎6艮7坤8)
 # 用三爻二进制: 阳=1 阴=0, 自下而上
 TRIGRAM_MAP = {
+    # 三爻二进制: 阳=1 阴=0, 自下而上 (初, 二, 三)
+    # 口诀: 兑上缺=(1,1,0), 巽下断=(0,1,1), 震仰盂=(1,0,0), 艮覆碗=(0,0,1)
     (1, 1, 1): ('乾', '☰', 1),
-    (0, 1, 1): ('兑', '☱', 2),
+    (1, 1, 0): ('兑', '☱', 2),
     (1, 0, 1): ('离', '☲', 3),
-    (0, 0, 1): ('震', '☳', 4),
-    (1, 1, 0): ('巽', '☴', 5),
+    (1, 0, 0): ('震', '☳', 4),
+    (0, 1, 1): ('巽', '☴', 5),
     (0, 1, 0): ('坎', '☵', 6),
-    (1, 0, 0): ('艮', '☶', 7),
+    (0, 0, 1): ('艮', '☶', 7),
     (0, 0, 0): ('坤', '☷', 8),
 }
 
@@ -983,7 +985,7 @@ def run_liuyao(method='coin', params=None, question=None, gender='male', year=No
 # 10. CLI入口
 # ============================================================
 
-if __name__ == '__main__':
+def main():
     args = sys.argv[1:]
     
     if len(args) == 0:
@@ -1036,3 +1038,6 @@ if __name__ == '__main__':
         import traceback
         traceback.print_exc()
         sys.exit(1)
+
+if __name__ == '__main__':
+    main()

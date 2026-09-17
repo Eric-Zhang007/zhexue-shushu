@@ -1,6 +1,6 @@
 # 玄学数术.skill
 
-八字(59神煞·节气·大运·流年·流月·流日·流时·用神称骨) + 梅花易数 + 奇门遁甲 + 大六壬 + 紫微斗数
+八字(59神煞·节气·大运·流年·流月·流日·流时·用神称骨) + 六爻纳甲 + 梅花易数 + 奇门遁甲 + 大六壬 + 紫微斗数
 
 纯 Python 实现。可在任何 Python 3.10+ 环境中运行。
 
@@ -15,6 +15,7 @@ pip install git+https://github.com/Eric-Zhang007/zhexue-shushu.git
 bazi 1986 3 15 12 0 male
 chenggu 丁亥 8 18 戌
 yongshen 1986 3 15 12 0 male
+liuyao manual 1 1 0 1 0 1 0 2 0 0 3 0
 ```
 
 ### 方法二：克隆 + 本地安装
@@ -34,6 +35,7 @@ cd zhexue-shushu
 python3 zhexue/bazi.py 1986 3 15 12 0 male
 python3 zhexue/chenggu.py 丁亥 8 18 戌
 python3 zhexue/yongshen.py 1986 3 15 12 0 male
+python3 zhexue/liuyao.py manual 1 1 0 1 0 1 0 2 0 0 3 0
 ```
 
 ---
@@ -47,6 +49,7 @@ python3 zhexue/yongshen.py 1986 3 15 12 0 male
 | `yongshen` | 用神分析 — 日主旺衰、用神、忌神 |
 | `chenggu` | 袁天罡称骨算命 |
 | `zhexue_core.py` | 核心数据+59神煞引擎 |
+| `liuyao` | 六爻纳甲筮法 — 铜钱/时间/手动起卦，纳甲装卦（世应·六亲·六兽）、动爻变卦、月建日辰旬空、旺衰用神 |
 | `meihua.py` | 梅花易数 |
 | `qimen.py` | 奇门遁甲（时家转盘·拆补法） |
 | `liuren.py` | 大六壬（贼克法三传·天将） |
@@ -114,6 +117,31 @@ chenggu 丁亥 8 18 戌
 
 ---
 
+## 六爻纳甲 `liuyao`
+
+```bash
+# 铜钱起卦（随机摇6次）
+liuyao coin
+liuyao coin -q "问事业"
+
+# 时间起卦
+liuyao time 2026 7 28 8
+
+# 手动装卦：前6位为阴阳（1阳0阴），后6位为动爻标识（0静、非0动）
+liuyao manual 1 1 0 1 0 1 0 2 0 0 3 0
+
+# 简写模式：只给6位阴阳，动爻自动判定
+liuyao manual 1 0 1 1 0 1
+```
+
+参数：`coin | time <年> <月> <日> <时> | manual [12位] | manual-short [6位] [-q 问题]`
+
+装卦流程（脚本自动完成）：纳支（浑天甲子）→ 纳甲天干 → 安世应（八宫定位）→ 定六亲 → 安六兽 → 动爻变卦 → 月建日辰旬空 → 旺衰 → 用神匹配。
+
+输出 JSON 关键字段：`time`（月建/日辰/旬空）、`question`、`yongshen`、`ben_gua`（name/palace/shi_type/shi_yao/ying_yao）、`yao[]`（ganzhi/liuqin/liushou/is_shi/is_ying/is_dong/wangshuai/bian_ganzhi）、`bian_gua`。
+
+---
+
 ## 神煞引擎（59种）
 
 78条匹配规则。每条含起算来源、检视位置、性别条件。规则类型：
@@ -159,7 +187,7 @@ r = shen_sha_all('丁','亥','己','酉','乙','丑','丙','戌')
 | **Codex** | `codex` 环境下直接执行 `bazi 1986 3 15 12 0 male` |
 | **Hermes Agent** | 如安装为 skill（`hermes skill install zhexue-shushu`），agent 自动获得完整上下文；否则直接 `python3 zhexue/bazi.py ...` |
 | **OpenCode** | `opencode` 环境中直接运行 `bazi ...` |
-| **任意 CLI** | 安装后 `bazi` / `chenggu` / `yongshen` 是全局命令，任何 terminal 都能用 |
+| **任意 CLI** | 安装后 `bazi` / `chenggu` / `yongshen` / `liuyao` 是全局命令，任何 terminal 都能用 |
 
 核心思想：**pip install 就够了**。所有工具安装后成为系统级 CLI 命令，无需为每个框架做特殊配置。
 
@@ -167,7 +195,7 @@ r = shen_sha_all('丁','亥','己','酉','乙','丑','丙','戌')
 
 ## 数据
 
-- `data/jieqi_data.txt` — 1800-2100 年 302 年节气数据（161KB），来自传统农历节气表
+- `zhexue/data/jieqi_data.txt` — 1800-2100 年 302 年节气数据（161KB），随包安装；脚本自动解析（包内 `data/` → 同级 `../data/` 顺序查找）
 - `references/shensha-references.txt` — 59 条神煞完整解读（71KB）
 - `references/shensha-mapping-table.md` — 59 种神煞 78 条规则的 JSON 映射
 
@@ -180,6 +208,13 @@ r = shen_sha_all('丁','亥','己','酉','乙','丑','丙','戌')
 起运: 6.97岁 顺排  日主: 戊土 死
 用神: 水  忌神:土  身旺
 神煞: 10次命中 (太极 福星 十灵 六秀 孤鸾 将星2 天医 桃花 九丑 羊刃2)
+```
+
+```
+liuyao manual 1 1 0 1 0 1 0 2 0 0 3 0
+
+本卦: 火泽睽（艮宫四世，世四应初）  变卦: 天雷无妄
+纳甲: 丁巳 丁卯 丁丑 / 己酉 己未 己巳（动爻: 二、五）
 ```
 
 ---

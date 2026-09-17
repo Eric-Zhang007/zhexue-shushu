@@ -3,10 +3,10 @@
 八字排盘 增强版 — 匹配问真八字APP全部信息
 输出：四柱完整信息（主星·天干·地支·藏干·星运·自坐·空亡·纳音·神煞）+大运+流年+流月
 """
-import sys, json
+import sys, os, json
 from datetime import datetime, timedelta
 
-sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zhexue_core import (
     TIAN_GAN, DI_ZHI, GAN_WUXING, GAN_YINYANG, ZHI_WUXING,
     day_ganzhi_from_date, hour_zhi_index, hour_ganzhi,
@@ -193,7 +193,7 @@ def pillar_info(year, month, day, hour, minute, gender, liunian_year=None):
 
     # 用神
     try:
-        sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from yongshen import calc_yongshen
         pillars_list = [TIAN_GAN[y_gan], DI_ZHI[y_zhi], TIAN_GAN[m_gan], DI_ZHI[m_zhi],
                         TIAN_GAN[d_gan], DI_ZHI[d_zhi], TIAN_GAN[h_gan], DI_ZHI[h_zhi]]

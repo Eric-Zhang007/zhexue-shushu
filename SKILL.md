@@ -36,15 +36,18 @@ data:
 ## 数据目录
 
 ```
-data/
+zhexue/data/
 └── jieqi_data.txt     # 1800-2100年302年节气数据(161KB)
 ```
+
+脚本按 `包内 data/` → `同级 ../data/` 顺序自动解析数据路径；仓库包内布局与 skill 的 `scripts/`+`data/` 并列布局均可运行。
 
 ## 参考文档
 
 ```
 references/
 ├── corrections_log.md              # 修正记录
+├── liuyao-calibration.md           # 六爻脚本校准：历法bug修复、验证基准、变爻六亲口径
 ├── geju-career-analysis.md         # 格局分析+职业/学业轨迹映射 ★NEW
 ├── health-analysis.md              # 八字+科学双框架健康分析
 ├── shensha-references.txt          # 59条神煞完整解读(71KB)

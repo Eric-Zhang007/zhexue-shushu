@@ -14,11 +14,11 @@
 CLI: python3 liuren.py <year> <month> <day> <hour> <minute>
 输出：课式ASCII图+JSON
 """
-import sys
+import sys, os
 import json
 import math
 
-sys.path.insert(0, '/home/zjc/.hermes/skills/zhexue-methods/scripts')
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zhexue_core import (
     TIAN_GAN, DI_ZHI, GAN_WUXING, ZHI_WUXING,
     WUXING_KE,

@@ -6,11 +6,11 @@ CLI: python3 ziwei.py <year> <month> <day> <hour> <minute> <gender>
 
 依赖: zhexue_core.py (同目录), lunarcalendar, ephem
 """
-import sys, json
+import sys, os, json
 from datetime import datetime, date
 from lunarcalendar import Lunar
 
-sys.path.insert(0, __file__.rsplit('/', 1)[0])
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from zhexue_core import (
     TIAN_GAN, DI_ZHI, GAN_WUXING, ZHI_WUXING,
     GAN_YINYANG, ZHI_YINYANG,
